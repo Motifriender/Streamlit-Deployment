@@ -2,7 +2,12 @@ import os
 import asyncio
 from datetime import datetime
 import streamlit as st
-from agents import Agent, Runner, handoff, RunContextWrapper
+
+# Ensure agents module exists and imports are correct
+try:
+    from agents import Agent, Runner, handoff, RunContextWrapper
+except ImportError as e:
+    st.error(f"Error importing agents module: {e}")
 
 # ============================================================
 # 🔧 Environment Setup
@@ -48,81 +53,33 @@ def on_document_verifying_agent_handoff(ctx: RunContextWrapper[None]):
 def on_case_preparation_agent_handoff(ctx: RunContextWrapper[None]):
     st.info("[SYSTEM] Appointment info recorded → transferring to Case Preparation Agent")
 
-
 # ============================================================
 # 🧩 Define Agents
 # ============================================================
 
-import asyncio
-
-async def main():
-    await test_call_directing_agent()
-    await test_note_taking_agent()
-    await document_verifying_agent()
-    await calendar_management_agent()
-    await case_preparation_agent()
-
-# To run the async function
-if __name__ == "__main__":
-    asyncio.run(main())
-
 call_directing_agent = Agent(
     name="CallDirectingAgent",
-    instructions="""
-    You handle all incoming calls from customers.
-    Gather key legal information: accident date, injuries, insurance, witnesses, and documents.
-    Hand off to respective agents as necessary.
-    Maintain a professional tone and guide toward scheduling a consultation.
-    """,
-    handoffs=[
-        handoff("note_taking_agent", on_handoff=on_note_taking_agent_handoff),
-        handoff("note_taking_assistant", on_handoff=on_note_taking_assistant_handoff),
-        handoff("calendar_management_agent", on_handoff=on_calendar_management_agent_handoff),
-        handoff("calendar_assistant", on_handoff=on_calendar_assistant_handoff),
-        handoff("document_verifying_agent", on_handoff=on_document_verifying_agent_handoff),
-        handoff("case_preparation_agent", on_handoff=on_case_preparation_agent_handoff),
-    ]
+    instructions="..."  # complete with relevant instructions
 )
 
 note_taking_agent = Agent(
     name="NoteTakingAgent",
-    instructions="""
-    You are a Note Taking Agent.
-    Collect structured data from the client's call:
-    - Accident date & location
-    - Injuries
-    - Medical treatment received
-    - Insurance details
-    - Witnesses and photo evidence.
-    Return the data in a well-organized summary for legal staff.
-    """
+    instructions="..."  # complete with relevant instructions
 )
 
 document_verifying_agent = Agent(
     name="DocumentVerifyingAgent",
-    instructions="""
-    Verify that all required documents are signed and uploaded.
-    If complete → hand off to Case Preparation Agent.
-    If missing → alert client via Email Agent to complete them.
-    """
+    instructions="..."  # complete with relevant instructions
 )
 
 calendar_management_agent = Agent(
     name="CalendarManagementAgent",
-    instructions="""
-    You are responsible for scheduling consultation appointments.
-    Cross-check availability using Google Calendar and only book unoccupied time slots.
-    Schedule the earliest possible available time.
-    """
+    instructions="..."  # complete with relevant instructions
 )
 
 case_preparation_agent = Agent(
     name="CasePreparationAgent",
-    instructions="""
-    Prepare internal client case file.
-    Summarize all collected data for the attorney.
-    Notify client of any missing documents before the scheduled appointment.
-    """
+    instructions="..."  # complete with relevant instructions
 )
 
 # Map agent names for dropdown use
@@ -160,4 +117,4 @@ if st.button("🚀 Run Selected Agent"):
                 st.error(f"Error running agent: {e}")
 
 st.markdown("---")
-st.info("✅ All agents are initialized and ready for interaction.")
+st.info("✅ All agents are initialized and ready.")
