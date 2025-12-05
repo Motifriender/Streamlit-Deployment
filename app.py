@@ -53,6 +53,19 @@ def on_case_preparation_agent_handoff(ctx: RunContextWrapper[None]):
 # 🧩 Define Agents
 # ============================================================
 
+import asyncio
+
+async def main():
+    await test_call_directing_agent()
+    await test_note_taking_agent()
+    await document_verifying_agent()
+    await calendar_management_agent()
+    await case_preparation_agent()
+
+# To run the async function
+if __name__ == "__main__":
+    asyncio.run(main())
+
 call_directing_agent = Agent(
     name="CallDirectingAgent",
     instructions="""
