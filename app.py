@@ -219,7 +219,6 @@ async def test_document_verifying_agent(): # Renamed function
 
 await test_document_verifying_agent()
 
-!pip install openai-agents -q
 from agents import Agent, Runner
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
