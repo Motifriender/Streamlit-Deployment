@@ -1,8 +1,3 @@
-py -m install openai-agents -q
-py -m install openai -q
-
-py -m install -U pydantic
-
 import os
 import openai
 import asyncio
