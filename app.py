@@ -5,6 +5,17 @@ from datetime import datetime
 from agents import Agent, Runner, function_tool, handoff, RunContextWrapper
 from google.colab import userdata
 
+import streamlit as st
+import asyncio
+
+async def fetch_data():
+    await asyncio.sleep(1)
+    return "Async result"
+
+st.title("Async Example")
+result = st.experimental_async(fetch_data)  # Runs in background
+st.write(result)
+
 # Get the OpenAI API key from Colab's user data
 openai_api_key = userdata.get('OpenAI')
 
