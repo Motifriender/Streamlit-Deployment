@@ -80,7 +80,6 @@ async def test_call_directing_agent():
 
 await test_call_directing_agent()
 
-!pip install openai-agents -q
 from agents import Agent, Runner
 import os
 from google.colab import userdata
