@@ -1,5 +1,5 @@
-!pip install openai-agents -q
-!pip install openai -q
+pip install openai-agents -q
+pip install openai -q
 
 pip install -U pydantic
 
