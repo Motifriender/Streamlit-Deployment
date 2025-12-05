@@ -1,7 +1,7 @@
-py install openai-agents -q
-py install openai -q
+python -m install openai-agents -q
+python -m install openai -q
 
-py install -U pydantic
+python -m install -U pydantic
 
 import os
 import openai
