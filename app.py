@@ -1,101 +1,240 @@
-import os
-import asyncio
-from datetime import datetime
+"""Streamlit web interface for Multi-Agent Legal System with conversation memory."""
+
 import streamlit as st
+import asyncio
+import sys
+import os
+from datetime import datetime
+from pathlib import Path
 
-# Ensure agents module exists and imports are correct
-try:
-    from agents import Agent, Runner, handoff, RunContextWrapper
-except ImportError as e:
-    st.error(f"Error importing agents module: {e}")
+# Add parent directory to path to import from main project
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# ============================================================
-# 🔧 Environment Setup
-# ============================================================
+from config.settings import get_config, ConfigurationError
+from legal_agents.build_portfolio_manager import portfolio_agent
+from legal_agents.build_receptionist_agent import build_receptionist_agent
+from legal_agents.email_agent import build_emaila_agent_analyst
+from legal_agents.calendar_agent import build_calendar_agent
+from tools.openai import get_openai_data
+from tools.memo_editor import create_legal_appointment_memo
+from agents import Runner
 
-# Load your API Key (from Streamlit secrets or environment)
-openai_api_key = st.secrets.get("OPENAI_API_KEY", None)
-if not openai_api_key:
-    st.warning("⚠️ OpenAI API key not found in Streamlit secrets. Please add it under Settings.")
-else:
-    os.environ["OPENAI_API_KEY"] = openai_api_key
 
-# ============================================================
-# 🔁 Async Example (demo)
-# ============================================================
+# Page configuration
+st.set_page_config(
+    page_title="Multi-Agent Legal System",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-async def fetch_data():
-    await asyncio.sleep(1)
-    return "Async task completed successfully."
+# Custom CSS
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .sub-header {
+        font-size: 1.2rem;
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .analysis-box {
+        background-color: #f0f2f6;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    .success-box {
+        background-color: #d4edda;
+        border-left: 5px solid #28a745;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    .warning-box {
+        background-color: #fff3cd;
+        border-left: 5px solid #ffc107;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    .chat-message {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+    }
+    .user-message {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196f3;
+    }
+    .assistant-message {
+        background-color: #f5f5f5;
+        border-left: 4px solid #4caf50;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-st.title("📞 Law Firm Agent Framework")
-st.write(asyncio.run(fetch_data()))
 
-# ============================================================
-# 🤖 Agent Callbacks (handoffs)
-# ============================================================
+def initialize_session_state():
+    """Initialize session state variables."""
+    if 'agents_built' not in st.session_state:
+        st.session_state.agents_built = False
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'analysis_history' not in st.session_state:
+        st.session_state.analysis_history = []
+    if 'pm_agent' not in st.session_state:
+        st.session_state.pm_agent = None
 
-def on_note_taking_agent_handoff(ctx: RunContextWrapper[None]):
-    st.info("[SYSTEM] Keywords detected → transferring to Note Taking Agent")
 
-def on_note_taking_assistant_handoff(ctx: RunContextWrapper[None]):
-    st.info("[SYSTEM] Data saved to Sheet → transferring to Note Taking Assistant")
+def build_agents():
+    """Build all agents and cache in session state."""
+    if st.session_state.agents_built:
+        return st.session_state.pm_agent
 
-def on_calendar_management_agent_handoff(ctx: RunContextWrapper[None]):
-    st.info("[SYSTEM] Date/time detected → transferring to Calendar Management Agent")
+    with st.spinner("🔧 Building AI agents..."):
+        try:
+            # Build specialist agents
+            fundamental = build_email_agent()
+            macro = receptionist_agent(get_fred_data)
+            quant = build_calendar_agent()
 
-def on_calendar_assistant_handoff(ctx: RunContextWrapper[None]):
-    st.info("[SYSTEM] Calendar data requested → transferring to Calendar Assistant")
+            # Build portfolio manager
+            pm = build_portfolio_manager(
+                fundamental,
+                macro,
+                quant,
+                create_investment_memo
+            )
 
-def on_document_verifying_agent_handoff(ctx: RunContextWrapper[None]):
-    st.info("[SYSTEM] Checking document completion → transferring to Document Verifying Agent")
+            st.session_state.pm_agent = pm
+            st.session_state.agents_built = True
+            st.success("✅ AI agents ready!")
+            return pm
 
-def on_case_preparation_agent_handoff(ctx: RunContextWrapper[None]):
-    st.info("[SYSTEM] Appointment info recorded → transferring to Case Preparation Agent")
+        except Exception as e:
+            st.error(f"❌ Error building agents: {e}")
+            return None
+
+
+async def run_analysis(query: str, pm_agent):
+    """Run customer data inquery with the portfolio manager."""
+    try:
+        # Build conversation context from history
+        conversation_context = ""
+
+        # Get last 3 exchanges for context (6 messages = 3 back-and-forth)
+        recent_history = st.session_state.chat_history[-6:] if len(st.session_state.chat_history) > 0 else []
+
+        if existing_customer:
+            conversation_context = "\n\nPrevious conversation context:\n"
+            def on_receptionist_agent_handoff(ctx: RunContextWrapper[None]):
+               st.info("[SYSTEM] Keywords detected then transfer to portfolio_manager_agent")
+
+            def on_portfolio_manager_agent_handoff(ctx:RunContextWrapper[None]):
+               st.info("[SYSTEM] Verifying client portfolio in firm records then transfer to calendar_agent")
+            
+            def on_calendar_agent_handoff(ctx: RunContextWrapper[None]):
+               st.info("[SYSTEM] After checking and scheduling appointment for new client or existing client then transfer to email agent")
+
+            def on_email_agent_handoff(ctx: RunContextWrapper[None]):
+                st.info("[SYSTEM] Details of appointment scheduled from data retrieval from calendar agent, and if there are any outstanding documents detected within client profile, this data will be determined by portfolio manager.")
+                # In a real system, email client of appointment information and inform them of any outstanding documents or fees which should be taken care of before appointment, etc.
+            
+            for msg in recent_history:
+                role = "User" if msg['role'] == 'user' else "Assistant"
+                conversation_context += f"{role}: {msg['content'][:200]}...\n"
+            conversation_context += "\n"
+
+        # Add context with current date
+        today = datetime.now().strftime("%B %d, %Y")
+        contextualized_query = f"Today is {today}.{conversation_context}\nCurrent question: {query}"
+
+        # Run analysis
+        config = get_config()
+        response = await Runner.run(
+            portfolio_manager_agent
+            contextualized_query,
+            max_turns=config['max_turns']
+        )
+
+        return response.final_output
+
+    except Exception as e:
+        return f"❌ Error during analysis: {str(e)}"
+
+
+def display_chat_history():
+    """Display conversation history."""
+    for idx, message in enumerate(st.session_state.chat_history):
+        if message['role'] == 'user':
+            st.markdown(f"""
+            <div class="chat-message user-message">
+                <strong>🧑 You:</strong><br>
+                {message['content']}
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="chat-message assistant-message">
+                <strong>🤖 AI Analyst:</strong><br>
+                {message['content']}
+            </div>
+            """, unsafe_allow_html=True)
 
 # ============================================================
 # 🧩 Define Agents
 # ============================================================
 
 call_directing_agent = Agent(
-    name="CallDirectingAgent",
+    name="receptionist_agent",
     instructions="..."  # complete with relevant instructions
 )
 
 note_taking_agent = Agent(
-    name="NoteTakingAgent",
+    name="portfolio_manager_agent",
     instructions="..."  # complete with relevant instructions
 )
 
 document_verifying_agent = Agent(
-    name="DocumentVerifyingAgent",
+    name="calendar_agent",
     instructions="..."  # complete with relevant instructions
 )
 
 calendar_management_agent = Agent(
-    name="CalendarManagementAgent",
-    instructions="..."  # complete with relevant instructions
-)
-
-case_preparation_agent = Agent(
-    name="CasePreparationAgent",
+    name="email_agent",
     instructions="..."  # complete with relevant instructions
 )
 
 # Map agent names for dropdown use
 AGENTS = {
-    "Call Directing Agent": call_directing_agent,
-    "Note Taking Agent": note_taking_agent,
-    "Document Verifying Agent": document_verifying_agent,
-    "Calendar Management Agent": calendar_management_agent,
-    "Case Preparation Agent": case_preparation_agent,
+    "Receptionist Agent": receptionist_agent,
+    "Portfolio Manager Agent": portfolio_manager_agent,
+    "Calendar Agent": calendar_agent,
+    "Email Agent": email_agent,
 }
 
 # ============================================================
 # 💬 Streamlit Interface
 # ============================================================
 
-st.header("🎯 Test Any Agent")
+
+def main():
+    """Main Streamlit app."""
+
+    # Initialize session state
+    initialize_session_state()
+
+    # Header
+    st.markdown('<div class="main-header">📊 Multi-Agent Legal System</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Automating and Optimizing Workflow with Memory</div>', unsafe_allow_html=True)
+
+    # Sidebar
+    with st.sidebar:
+   st.header("🎯 Test Any Agent")
 
 selected_agent_name = st.selectbox("Choose an agent to test:", list(AGENTS.keys()))
 selected_agent = AGENTS[selected_agent_name]
