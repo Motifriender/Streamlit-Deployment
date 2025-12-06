@@ -166,6 +166,14 @@ async def run_analysis(query: str, pm_agent):
     except Exception as e:
         return f"❌ Error during analysis: {str(e)}"
 
+import os import aiohttp import asyncio import streamlit as st
+from google.colab import userdata
+userdata.get('RETELL_API_KEY')
+userdata.get('RETELL_PUBLISHED_ID')
+
+RETELL_API_KEY = st.secrets.get("RETELL_API_KEY")  = st.secrets.get("RETELL_PUBLISHED_ID") 
+
+async def call_retell_conversation(https://dashboard.retellai.com/agents/agent_254fc8db2132ad25183a49f589): # Replace url and payload shape with the real Retell API endpoint and params url = f"https://api.retell.ai/v1/published_conversations/{published_id}/reply" headers = { "Authorization": f"Bearer {api_key}", "Content-Type": "application/json", } payload = { "message": user_message, # include additional options per Retell docs, e.g. conversation context id, metadata, etc. } async with aiohttp.ClientSession() as session: async with session.post(url, json=payload, headers=headers) as resp: resp.raise_for_status() data = await resp.json() # Map the API response to a user-friendly string. Adjust according to actual response format. return data.get("reply") or data.get("message") or data
 
 def display_chat_history():
     """Display conversation history."""
